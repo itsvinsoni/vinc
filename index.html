@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prepe - The Cell (One Page Note in Hindi)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Required libraries for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <style>
+        html {
+            scroll-behavior: smooth;
+        }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #dbe7ff 100%);
+        }
+        .scroll-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-y: auto;
+            gap: 2.5rem; /* 40px */
+            padding: 2.5rem 0;
+            width: 100%;
+            min-height: 100vh;
+            scrollbar-width: none;
+        }
+        .scroll-container::-webkit-scrollbar { display: none; }
+        .slide {
+            flex-shrink: 0;
+            width: 95%; 
+            max-width: 1080px;
+            height: auto;
+            background-color: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            color: #1a202c;
+            position: relative;
+            box-shadow: 0 20px 60px -10px rgba(0, 0, 0, 0.15);
+            border-radius: 36px;
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            overflow: hidden;
+            padding: 1.5rem; /* 24px */
+            display: flex;
+            flex-direction: column;
+            background-image: url('data:image/svg+xml;utf8,<svg width="350" height="200" xmlns="http://www.w3.org/2000/svg"><text x="50%" y="50%" font-size="50" font-weight="bold" font-family="Poppins, sans-serif" fill="rgba(0,0,0,0.04)" text-anchor="middle" dominant-baseline="middle" transform="rotate(-30 175 100)">Prepe</text></svg>');
+        }
+        @media (min-width: 640px) {
+            .slide {
+                padding: 2.8125rem; /* 45px */
+            }
+        }
+        .brand-logo {
+            position: absolute;
+            top: 1.5rem; /* 24px */
+            left: 1.5rem; /* 24px */
+            font-size: 2rem; /* 32px */
+            font-weight: 700;
+            color: #f97316;
+            z-index: 1;
+        }
+        @media (min-width: 640px) {
+           .brand-logo {
+                top: 2.8125rem; /* 45px */
+                left: 2.8125rem; /* 45px */
+                font-size: 2.125rem; /* 34px */
+           }
+        }
+        #download-pdf-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-image: linear-gradient(to right, #1d4ed8 0%, #3b82f6 51%, #1d4ed8 100%);
+            background-size: 200% auto;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+            transition: all 0.3s ease-in-out;
+            z-index: 100;
+            border: none;
+        }
+        @media (min-width: 640px) {
+            #download-pdf-btn {
+                bottom: 30px;
+                right: 30px;
+                padding: 15px 30px;
+                font-size: 1.125rem;
+            }
+        }
+        #download-pdf-btn:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 12px 28px rgba(59, 130, 246, 0.5);
+            background-position: right center;
+        }
+        #loader-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6); display: none; justify-content: center;
+            align-items: center; z-index: 1000; color: white; font-size: 24px;
+            font-weight: 600; backdrop-filter: blur(5px);
+        }
+        .slide-title {
+            font-size: 2rem; /* 32px */
+            font-weight: 700; text-align: center; margin-top: 4rem;
+            margin-bottom: 2rem; color: #1a202c; letter-spacing: -1.5px;
+            position: relative; z-index: 1;
+        }
+        @media (min-width: 640px) {
+            .slide-title {
+                font-size: 2.875rem; /* 46px */
+                margin-top: 3.75rem; /* 60px */
+                margin-bottom: 1.875rem; /* 30px */
+            }
+        }
+        .card {
+             background-color: rgba(255, 255, 255, 0.85);
+             border-radius: 22px; padding: 1.25rem;
+             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.07);
+             border: 1px solid rgba(255, 255, 255, 0.5);
+             display: flex; flex-direction: column;
+             transition: all 0.3s ease-in-out;
+             position: relative; z-index: 1;
+        }
+        .card:not(.mind-map-card):hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+        }
+        .card-title {
+             font-size: 1.125rem; /* 18px */
+             font-weight: 700; margin-bottom: 0.75rem;
+             padding-bottom: 0.625rem; border-bottom: 1px solid rgba(0,0,0,0.07);
+             display: flex; align-items: center;
+        }
+        @media (min-width: 640px) {
+            .card-title { font-size: 1.25rem; /* 20px */ }
+        }
+        .card-title .icon {
+            margin-right: 0.75rem; font-size: 1.25rem; width: 36px; height: 36px;
+            display: grid; place-items: center; border-radius: 50%;
+            background-color: var(--icon-bg, #fef2e5); color: var(--icon-color, #f97316);
+        }
+        .card-content {
+            font-size: 0.9375rem; /* 15px */
+            line-height: 1.75; flex-grow: 1;
+        }
+    </style>
+</head>
+<body>
+    <div id="loader-overlay">
+        <span><i class="fa-solid fa-spinner fa-spin mr-3"></i>Generating PDF...</span>
+    </div>
+
+    <div class="scroll-container">
+        <!-- Slide 1: Overview & Mindmap -->
+        <div id="slide1" class="slide">
+            <div class="brand-logo">Prepe</div>
+            <h1 class="slide-title">🧬 The Cell: संरचना और कार्य</h1>
+            
+            <!-- Desktop Mindmap Layout -->
+            <div class="hidden md:flex flex-grow items-center justify-center">
+                <div class="w-full h-full relative flex items-center justify-center" style="min-height: 700px;">
+                    <svg class="absolute top-0 left-0 w-full h-full z-10" viewbox="0 0 990 990">
+                        <defs><linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:#fdbf72;stop-opacity:1" /><stop offset="100%" style="stop-color:#f97316;stop-opacity:1" /></linearGradient></defs>
+                        <line x1="495" y1="495" x2="215" y2="280" stroke="url(#lineGrad)" stroke-width="2.5" /><line x1="495" y1="495" x2="775" y2="280" stroke="url(#lineGrad)" stroke-width="2.5" /><line x1="495" y1="495" x2="111" y2="495" stroke="url(#lineGrad)" stroke-width="2.5" /><line x1="495" y1="495" x2="879" y2="495" stroke="url(#lineGrad)" stroke-width="2.5" /><line x1="495" y1="495" x2="215" y2="710" stroke="url(#lineGrad)" stroke-width="2.5" /><line x1="495" y1="495" x2="775" y2="710" stroke="url(#lineGrad)" stroke-width="2.5" />
+                    </svg>
+                    
+                    <!-- Center Node -->
+                    <div class="absolute w-72 h-72 bg-gradient-to-br from-orange-500 to-red-500 rounded-full flex flex-col items-center justify-center text-white shadow-2xl z-20">
+                        <h2 class="text-4xl font-bold">The Cell</h2>
+                        <p class="text-xl font-semibold opacity-90">कोशिका</p>
+                        <p class="text-sm mt-2 bg-white/20 px-3 py-1 rounded-full">Basic Unit of Life</p>
+                    </div>
+
+                    <!-- Top Left: Cell Theory -->
+                    <div class="card mind-map-card absolute w-64 text-center transform -translate-x-[22rem] -translate-y-52 z-30">
+                        <h3 class="card-title justify-center text-base" style="--icon-color: #c2410c; --icon-bg: #fff7ed;">
+                            <i class="fa-solid fa-scroll icon"></i> Cell Theory
+                        </h3>
+                        <ul class="text-xs list-disc list-inside text-left">
+                            <li>Schleiden और Schwann (1839)</li>
+                            <li>सभी जीव Cell से बने होते हैं</li>
+                            <li>यह शरीर की बुनियादी इकाई (Unit) है</li>
+                            <li>Virchow: पुरानी Cell से नई बनती है</li>
+                        </ul>
+                    </div>
+
+                    <!-- Top Right: Cell Types -->
+                    <div class="card mind-map-card absolute w-64 text-center transform translate-x-[22rem] -translate-y-52 z-30">
+                        <h3 class="card-title justify-center text-base" style="--icon-color: #4b5563; --icon-bg: #f3f4f6;">
+                            <i class="fa-solid fa-shapes icon"></i> Types (प्रकार)
+                        </h3>
+                        <ul class="text-xs list-disc list-inside text-left">
+                            <li><strong>Prokaryotic:</strong> Nucleus नहीं होता (जैसे Bacteria)</li>
+                            <li><strong>Eukaryotic:</strong> Nucleus होता है (जैसे इंसान)</li>
+                            <li>अंतर: आकार और Organelles का है</li>
+                            <li>Virus एक Cell नहीं है (अपवाद)</li>
+                        </ul>
+                    </div>
+
+                    <!-- Mid Left: Nucleus -->
+                    <div class="card mind-map-card absolute w-64 text-center transform -translate-x-96 z-30">
+                        <h3 class="card-title justify-center text-base" style="--icon-color: #2563eb; --icon-bg: #eff6ff;">
+                            <i class="fa-solid fa-brain icon"></i> Nucleus (Boss)
+                        </h3>
+                        <ul class="text-xs list-disc list-inside text-left">
+                            <li>इसे कंट्रोल सेंटर (Control Center) कहते हैं</li>
+                            <li>इसमें DNA और Chromosomes होते हैं</li>
+                            <li>Nucleolus: यह Ribosomes बनाता है</li>
+                            <li>इसमें दो परतें और छिद्र (Pores) होते हैं</li>
+                        </ul>
+                    </div>
+
+                    <!-- Mid Right: Cytoplasm -->
+                    <div class="card mind-map-card absolute w-64 text-center transform translate-x-96 z-30">
+                        <h3 class="card-title justify-center text-base" style="--icon-color: #16a34a; --icon-bg: #f0fdf4;">
+                            <i class="fa-solid fa-water icon"></i> Cytoplasm
+                        </h3>
+                        <ul class="text-xs list-disc list-inside text-left">
+                            <li>यह जेली जैसा तरल (Jelly-like Fluid) है</li>
+                            <li>यहाँ रासायनिक क्रियाएं (Reactions) होती हैं</li>
+                            <li>इसमें Organelles तैरते रहते हैं</li>
+                            <li>70% पानी + नमक और प्रोटीन होता है</li>
+                        </ul>
+                    </div>
+
+                    <!-- Bot Left: Membrane -->
+                    <div class="card mind-map-card absolute w-64 text-center transform -translate-x-[22rem] translate-y-52 z-30">
+                        <h3 class="card-title justify-center text-base" style="--icon-color: #7e22ce; --icon-bg: #f5f3ff;">
+                            <i class="fa-solid fa-circle-notch icon"></i> Membrane
+                        </h3>
+                        <ul class="text-xs list-disc list-inside text-left">
+                            <li>Phospholipid Bilayer की बनी होती है</li>
+                            <li>Semi-permeable (केवल कुछ चीजें अंदर आती हैं)</li>
+                            <li>Fluid Mosaic Model पर आधारित</li>
+                            <li>यह सुरक्षा और आकार देती है</li>
+                        </ul>
+                    </div>
+
+                    <!-- Bot Right: Division -->
+                    <div class="card mind-map-card absolute w-64 text-center transform translate-x-[22rem] translate-y-52 z-30">
+                        <h3 class="card-title justify-center text-base" style="--icon-color: #ca8a04; --icon-bg: #fefce8;">
+                            <i class="fa-solid fa-scissors icon"></i> Cell Division
+                        </h3>
+                        <ul class="text-xs list-disc list-inside text-left">
+                            <li><strong>Mitosis:</strong> वृद्धि के लिए (2 Cells)</li>
+                            <li><strong>Meiosis:</strong> प्रजनन के लिए (4 Cells)</li>
+                            <li>Interphase: इसमें DNA कॉपी होता है</li>
+                            <li>PMAT चरण (Stages) होते हैं</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+             <!-- Mobile Vertical Layout -->
+            <div class="md:hidden flex flex-col items-center gap-4">
+                <div class="w-60 h-60 bg-gradient-to-br from-orange-500 to-red-500 rounded-full flex flex-col items-center justify-center text-white shadow-2xl mb-4">
+                    <h2 class="text-3xl font-bold">The Cell</h2>
+                    <p class="text-xl font-semibold">Structure</p>
+                </div>
+                <div class="w-full grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="card"><h3 class="card-title" style="--icon-color: #c2410c; --icon-bg: #fff7ed;"><i class="fa-solid fa-scroll icon"></i> Cell Theory</h3><ul class="text-sm list-disc list-inside text-left"><li>सभी जीव Cell से बने हैं</li><li>शरीर की मूल इकाई (Unit)</li></ul></div>
+                    <div class="card"><h3 class="card-title" style="--icon-color: #4b5563; --icon-bg: #f3f4f6;"><i class="fa-solid fa-shapes icon"></i> Types</h3><ul class="text-sm list-disc list-inside text-left"><li>Prokaryotic (बैक्टीरिया)</li><li>Eukaryotic (इंसान)</li></ul></div>
+                    <div class="card"><h3 class="card-title" style="--icon-color: #2563eb; --icon-bg: #eff6ff;"><i class="fa-solid fa-brain icon"></i> Nucleus</h3><ul class="text-sm list-disc list-inside text-left"><li>DNA स्टोर करता है</li><li>कंट्रोल सेंटर (Boss)</li></ul></div>
+                    <div class="card"><h3 class="card-title" style="--icon-color: #16a34a; --icon-bg: #f0fdf4;"><i class="fa-solid fa-water icon"></i> Cytoplasm</h3><ul class="text-sm list-disc list-inside text-left"><li>जेली जैसा द्रव (Fluid)</li><li>मेटाबोलिक रिएक्शन होती हैं</li></ul></div>
+                    <div class="card"><h3 class="card-title" style="--icon-color: #7e22ce; --icon-bg: #f5f3ff;"><i class="fa-solid fa-circle-notch icon"></i> Membrane</h3><ul class="text-sm list-disc list-inside text-left"><li>दोहरी परत (Bilayer)</li><li>अर्ध-पारगम्य (Semi-permeable)</li></ul></div>
+                    <div class="card"><h3 class="card-title" style="--icon-color: #ca8a04; --icon-bg: #fefce8;"><i class="fa-solid fa-scissors icon"></i> Division</h3><ul class="text-sm list-disc list-inside text-left"><li>Mitosis (शरीर के लिए)</li><li>Meiosis (प्रजनन के लिए)</li></ul></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 2: Comparison & Organelles -->
+        <div id="slide2" class="slide">
+            <div class="brand-logo">Prepe</div>
+            <h1 class="slide-title">🔬 तुलना और अंग (Comparison)</h1>
+            <div class="flex-grow grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Comparison Table -->
+                <div class="card lg:col-span-3 p-4 md:p-6">
+                    <h3 class="card-title text-gray-700 m-0 pb-4 text-center md:text-left" style="border:none;">
+                        <i class="fa-solid fa-table-columns icon"></i> Prokaryotic vs Eukaryotic Cells
+                    </h3>
+                    <div class="w-full overflow-x-auto">
+                        <table class="w-full text-sm text-left border-collapse">
+                            <thead>
+                                <tr class="bg-orange-50 text-orange-800">
+                                    <th class="p-3 border-b-2 border-orange-200">विशेषता (Feature)</th>
+                                    <th class="p-3 border-b-2 border-orange-200">Prokaryotic (जैसे बैक्टीरिया)</th>
+                                    <th class="p-3 border-b-2 border-orange-200">Eukaryotic (जैसे इंसान)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-gray-700">
+                                <tr><td class="p-3 border-b">Nucleus</td><td class="p-3 border-b text-red-600 font-semibold">नहीं होता (Absent)</td><td class="p-3 border-b text-green-600 font-semibold">होता है (Present)</td></tr>
+                                <tr><td class="p-3 border-b">आकार (Size)</td><td class="p-3 border-b">छोटा (0.1-5.0 µm)</td><td class="p-3 border-b">बड़ा (10-100 µm)</td></tr>
+                                <tr><td class="p-3 border-b">Organelles</td><td class="p-3 border-b">झिल्ली वाले नहीं होते</td><td class="p-3 border-b">Mitochondria, Golgi, आदि होते हैं</td></tr>
+                                <tr><td class="p-3 border-b">Ribosomes</td><td class="p-3 border-b">70S प्रकार</td><td class="p-3 border-b">80S प्रकार</td></tr>
+                                <tr><td class="p-3 border-b">विभाजन (Division)</td><td class="p-3 border-b">Binary Fission (बहुत तेज)</td><td class="p-3 border-b">Mitosis और Meiosis</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Organelle Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 lg:col-span-3 gap-6">
+                    <!-- Card 1 -->
+                    <div class="card sm:col-span-2 lg:col-span-1">
+                        <h3 class="card-title" style="--icon-color: #1e40af; --icon-bg: #dbeafe;">
+                            <i class="fa-solid fa-bolt icon"></i> ऊर्जा और प्रोटीन (Energy)
+                        </h3>
+                        <ul class="card-content text-sm space-y-3 pl-2">
+                            <li><strong>Mitochondria:</strong> Cell का पावर हाउस।</li>
+                            <li>सांस (Respiration) से ATP बनाता है।</li>
+                            <li>इसके पास अपना खुद का DNA होता है।</li>
+                            <li><strong>Ribosomes:</strong> प्रोटीन फैक्ट्री (Factory)।</li>
+                            <li>ये RER पर या द्रव में तैरते मिलते हैं।</li>
+                            <li>ये अमीनो एसिड जोड़कर प्रोटीन बनाते हैं।</li>
+                        </ul>
+                    </div>
+                    <!-- Card 2 -->
+                    <div class="card sm:col-span-2 lg:col-span-1">
+                        <h3 class="card-title" style="--icon-color: #166534; --icon-bg: #dcfce7;">
+                            <i class="fa-solid fa-box-open icon"></i> पैकिंग और सफाई (Packaging)
+                        </h3>
+                        <ul class="card-content text-sm space-y-3 pl-2">
+                            <li><strong>Golgi App:</strong> पोस्ट ऑफिस (Post Office)।</li>
+                            <li>यह प्रोटीन को पैक करके सही जगह भेजता है।</li>
+                            <li>इससे Lysosomes बनते हैं।</li>
+                            <li><strong>Lysosomes:</strong> सुसाइड बैग (Suicide Bags)।</li>
+                            <li>इसमें पचाने वाले एंजाइम (Enzymes) होते हैं।</li>
+                            <li>यह कचरे और बैक्टीरिया को नष्ट करता है।</li>
+                        </ul>
+                    </div>
+                    <!-- Card 3 -->
+                    <div class="card sm:col-span-2 lg:col-span-1">
+                        <h3 class="card-title" style="--icon-color: #0ea5e9; --icon-bg: #e0f2fe;">
+                            <i class="fa-solid fa-network-wired icon"></i> नेटवर्क और ट्रांसपोर्ट
+                        </h3>
+                        <div class="card-content space-y-3 text-xs pt-2">
+                            <div><h4 class="font-bold text-blue-700">Rough ER (RER)</h4><p class="mt-1">इस पर Ribosomes होते हैं → प्रोटीन बनाता है।</p></div>
+                            <div><h4 class="font-bold text-cyan-700">Smooth ER (SER)</h4><p class="mt-1">Ribosomes नहीं होते → फैट (Lipid) बनाता है।</p></div>
+                            <div><h4 class="font-bold text-red-700">Centrosome</h4><p class="mt-1">इसमें Centrioles होते हैं → विभाजन में मदद करता है।</p></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: Cell Cycle & Transport -->
+        <div id="slide3" class="slide">
+            <div class="brand-logo">Prepe</div>
+            <h1 class="slide-title">🔄 प्रक्रियाएं: चक्र और परिवहन</h1>
+            <div class="flex-grow grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                <!-- Cell Cycle Timeline -->
+                <div class="card md:row-span-2">
+                    <h3 class="card-title" style="--icon-color: #2563eb; --icon-bg: #dbeafe;">
+                        <i class="fa-solid fa-rotate icon"></i> Cell Cycle (कोशिका चक्र)
+                    </h3>
+                    <div class="card-content flex flex-col justify-around text-sm gap-4">
+                        <div class="border-b-2 border-dashed border-gray-200 pb-3">
+                            <h4 class="font-bold text-lg text-blue-800 flex items-center">
+                                <i class="fa-solid fa-hourglass-start text-2xl w-8 mr-2"></i> Interphase (तैयारी का समय)
+                            </h4>
+                            <ul class="mt-2 list-disc list-inside text-left px-2 md:px-4 space-y-1">
+                                <li><strong>G1 Phase:</strong> Cell बड़ी होती है, अंग कॉपी होते हैं।</li>
+                                <li><strong>S Phase:</strong> DNA डबल होता है (Synthesis)।</li>
+                                <li><strong>G2 Phase:</strong> विभाजन की तैयारी होती है।</li>
+                                <li>यह जीवन चक्र का सबसे लंबा समय है।</li>
+                            </ul>
+                        </div>
+                        <div class="py-3 border-b-2 border-dashed border-gray-200">
+                            <h4 class="font-bold text-lg text-green-800 flex items-center">
+                                <i class="fa-solid fa-arrows-split-up-and-left text-2xl w-8 mr-2"></i> M-Phase (Mitosis विभाजन)
+                            </h4>
+                            <ul class="mt-2 list-disc list-inside text-left px-2 md:px-4 space-y-1">
+                                <li><strong>Prophase:</strong> Chromosomes दिखने लगते हैं।</li>
+                                <li><strong>Metaphase:</strong> बीच में एक लाइन में आते हैं।</li>
+                                <li><strong>Anaphase:</strong> अलग होकर दूर जाते हैं।</li>
+                                <li><strong>Telophase:</strong> दो नए Nucleus बनते हैं।</li>
+                            </ul>
+                        </div>
+                        <div class="pt-3">
+                            <h4 class="font-bold text-lg text-yellow-800 flex items-center">
+                                <i class="fa-solid fa-clone text-2xl w-8 mr-2"></i> Cytokinesis
+                            </h4>
+                            <p class="px-2 md:px-4 text-sm">Cytoplasm बंट जाता है → 2 नई Cells बन जाती हैं।</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Transport Mechanisms -->
+                <div class="card">
+                    <h3 class="card-title" style="--icon-color: #ea580c; --icon-bg: #fff7ed;">
+                        <i class="fa-solid fa-truck-fast icon"></i> Membrane Transport (परिवहन)
+                    </h3>
+                    <ul class="card-content text-sm space-y-2 pl-2">
+                        <li><i class="fa-solid fa-check text-orange-500 w-5"></i> <strong>Passive:</strong> ऊर्जा नहीं लगती (Diffusion)।</li>
+                        <li><i class="fa-solid fa-check text-orange-500 w-5"></i> <strong>Osmosis:</strong> केवल पानी का बहाव।</li>
+                        <li><i class="fa-solid fa-check text-orange-500 w-5"></i> <strong>Active:</strong> ऊर्जा (ATP) लगती है।</li>
+                        <li><i class="fa-solid fa-check text-orange-500 w-5"></i> <strong>Bulk:</strong> चीजों को निगलना (Endocytosis)।</li>
+                    </ul>
+                </div>
+
+                <!-- Cytoskeleton -->
+                <div class="card">
+                    <h3 class="card-title" style="--icon-color: #16a34a; --icon-bg: #f0fdf4;">
+                        <i class="fa-solid fa-bone icon"></i> Cytoskeleton (कंकाल)
+                    </h3>
+                    <ul class="card-content text-sm space-y-2 pl-2">
+                        <li><i class="fa-solid fa-check text-green-500 w-5"></i> यह प्रोटीन का बना ढांचा है।</li>
+                        <li><i class="fa-solid fa-check text-green-500 w-5"></i> <strong>Microfilaments:</strong> आकार और गति के लिए।</li>
+                        <li><i class="fa-solid fa-check text-green-500 w-5"></i> <strong>Microtubules:</strong> रास्तों की तरह काम करते हैं।</li>
+                        <li><i class="fa-solid fa-check text-green-500 w-5"></i> Organelles को अपनी जगह रखता है।</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: Mega Matrix / Facts -->
+        <div id="slide4" class="slide">
+            <div class="brand-logo">Prepe</div>
+            <h1 class="slide-title">⚡ फाइनल रिविजन: मुख्य बातें</h1>
+            <div class="flex-grow w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                
+                <!-- Terms -->
+                <div class="card">
+                    <h3 class="card-title"><i class="fa-solid fa-book icon"></i> शब्दावली (Terminology)</h3>
+                    <ul class="card-content text-sm list-disc list-inside space-y-2.5 pl-2">
+                        <li><strong>Cytology:</strong> Cell का अध्ययन (Study)।</li>
+                        <li><strong>Protoplasm:</strong> Nucleus + Cytoplasm (जीवित भाग)।</li>
+                        <li><strong>Gene:</strong> DNA का छोटा हिस्सा।</li>
+                        <li><strong>Apoptosis:</strong> Cell की अपनी मृत्यु।</li>
+                    </ul>
+                </div>
+
+                <!-- Key Discoveries -->
+                <div class="card">
+                    <h3 class="card-title" style="--icon-color: #1d4ed8; --icon-bg: #e0e7ff;">
+                        <i class="fa-solid fa-history icon"></i> इतिहास और तथ्य (History)
+                    </h3>
+                    <ul class="card-content text-sm list-disc list-inside space-y-2.5 pl-2">
+                        <li><strong>Robert Hooke:</strong> Cell की खोज की (1665)।</li>
+                        <li><strong>Robert Brown:</strong> Nucleus को ढूंढा।</li>
+                        <li><strong>Human Cell:</strong> 46 Chromosomes होते हैं।</li>
+                        <li><strong>Smallest:</strong> Sperm या Mycoplasma।</li>
+                    </ul>
+                </div>
+
+                <!-- Division Types -->
+                <div class="card">
+                    <h3 class="card-title" style="--icon-color: #15803d; --icon-bg: #d1fae5;">
+                        <i class="fa-solid fa-code-branch icon"></i> विभाजन के प्रकार
+                    </h3>
+                    <ul class="card-content text-sm list-disc list-inside space-y-2.5 pl-2">
+                        <li><strong>Somatic Cells:</strong> Mitosis (घाव भरना/वृद्धि)।</li>
+                        <li><strong>Germ Cells:</strong> Meiosis (प्रजनन/शुक्राणु)।</li>
+                        <li><strong>Bacteria:</strong> Binary Fission (दो में बंटना)।</li>
+                    </ul>
+                </div>
+
+                <!-- Nicknames -->
+                <div class="card">
+                    <h3 class="card-title" style="--icon-color: #be123c; --icon-bg: #ffe4e6;">
+                        <i class="fa-solid fa-tag icon"></i> परीक्षा के लिए नाम
+                    </h3>
+                    <ul class="card-content text-sm list-disc list-inside space-y-2.5 pl-2">
+                        <li><strong>Suicide Bag:</strong> Lysosome (आत्महत्या की थैली)।</li>
+                        <li><strong>Powerhouse:</strong> Mitochondria (ऊर्जा घर)।</li>
+                        <li><strong>Post Office:</strong> Golgi Body (डाकघर)।</li>
+                        <li><strong>Protein Factory:</strong> Ribosome।</li>
+                    </ul>
+                </div>
+
+                <!-- Clinical -->
+                <div class="card">
+                    <h3 class="card-title" style="--icon-color: #701a75; --icon-bg: #f3e8ff;">
+                        <i class="fa-solid fa-user-md icon"></i> DMLT क्लीनिकल
+                    </h3>
+                    <ul class="card-content text-sm list-disc list-inside space-y-2.5 pl-2">
+                        <li><strong>Cancer:</strong> जब Cell अनियंत्रित होकर बंटती है।</li>
+                        <li><strong>RBC:</strong> इसमें Nucleus नहीं होता (Anucleated)।</li>
+                        <li><strong>WBC:</strong> इनमें Lysosomes ज्यादा होते हैं (सफाई के लिए)।</li>
+                    </ul>
+                </div>
+
+                <!-- Formulas/Ranges -->
+                <div class="card">
+                    <h3 class="card-title" style="--icon-color: #b45309; --icon-bg: #fef3c7;">
+                        <i class="fa-solid fa-ruler icon"></i> आकार और संख्या
+                    </h3>
+                    <ul class="card-content text-sm list-disc list-inside space-y-2.5 pl-2">
+                        <li><strong>RBC Size:</strong> लगभग 7.2 µm।</li>
+                        <li><strong>Chromosome:</strong> 23 जोड़े (Pairs) होते हैं।</li>
+                        <li><strong>Haploid:</strong> 23 (n) - Gametes में।</li>
+                    </ul>
+                </div>
+
+                <!-- Mistakes -->
+                <div class="card sm:col-span-2 lg:col-span-3">
+                    <h3 class="card-title text-gray-700" style="--icon-color: #4b5563; --icon-bg: #e5e7eb;">
+                        <i class="fa-solid fa-triangle-exclamation icon"></i> सामान्य गलतियां (Common Mistakes)
+                    </h3>
+                    <ul class="card-content text-sm list-disc list-inside grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2.5 pl-2">
+                        <li>Virus एक Cell नहीं है (Acellular)।</li>
+                        <li>DNA सिर्फ Nucleus में नहीं, Mitochondria में भी होता है।</li>
+                        <li>परिपक्व (Mature) RBC में Nucleus नहीं होता।</li>
+                        <li>Ribosome पर कोई झिल्ली (Membrane) नहीं होती।</li>
+                        <li>SER फैट (Lipid) बनाता है, प्रोटीन नहीं।</li>
+                        <li>पौधों (Plant) में Cell Wall होती है, इंसानों में नहीं।</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Follow Up Section -->
+        <div class="slide">
+             <div class="flex flex-col h-full justify-center items-center text-center p-6 md:p-12 bg-gradient-to-br from-gray-50 to-blue-100">
+                <p class="text-xl md:text-2xl font-semibold text-blue-600 mb-2 md:mb-4">Welcome to Prepe</p>
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-3 md:mb-5">Ace Your DMLT Exams!</h2>
+                <p class="text-base md:text-lg text-gray-600 mb-8 md:mb-12">Clear concepts, clear results.</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mb-8 md:mb-12 w-full max-w-4xl">
+                    <a href="https://offer.prepeai.in" target="_blank" class="block bg-white p-6 rounded-2xl border border-gray-200 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 ease-in-out">
+                        <i class="fa-solid fa-microscope text-4xl text-green-500 mb-3"></i>
+                        <h3 class="font-bold text-lg text-green-800">Anatomy Notes</h3>
+                        <p class="text-sm text-gray-500 mt-1">High Yield Topics</p>
+                    </a>
+                    <a href="https://shop.prepeai.in" target="_blank" class="block bg-white p-6 rounded-2xl border border-gray-200 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 ease-in-out">
+                        <i class="fa-solid fa-layer-group text-4xl text-teal-500 mb-3"></i>
+                        <h3 class="font-bold text-lg text-teal-800">Exam Courses</h3>
+                        <p class="text-sm text-gray-500 mt-1">Full Syllabus</p>
+                    </a>
+                    <a href="https://instagram.com/prepe.ai" target="_blank" class="block bg-white p-6 rounded-2xl border border-gray-200 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 ease-in-out">
+                        <i class="fab fa-instagram text-4xl text-pink-500 mb-3"></i>
+                        <h3 class="font-bold text-lg text-pink-800">Daily Quizzes</h3>
+                        <p class="text-sm text-gray-500 mt-1">@prepe.ai</p>
+                    </a>
+                </div>
+                <div class="border-t-2 border-dashed border-gray-300 pt-8 md:pt-10 w-full max-w-4xl">
+                    <a href="https://www.prepeai.in" target="_blank" class="inline-block bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold text-lg md:text-xl py-3 px-8 md:py-4 md:px-10 rounded-full shadow-lg hover:scale-105 transition-transform duration-300">
+                        <i class="fa-solid fa-globe mr-2"></i> Visit Our Website
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <button id="download-pdf-btn">
+        <i class="fa-solid fa-file-pdf mr-2"></i> Download PDF
+    </button>
+
+    <script>
+        const downloadPdfBtn = document.getElementById('download-pdf-btn');
+        const loaderOverlay = document.getElementById('loader-overlay');
+
+        downloadPdfBtn.addEventListener('click', async () => {
+            loaderOverlay.style.display = 'flex';
+            
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({
+                orientation: 'portrait',
+                unit: 'px',
+                format: [1080, 1080]
+            });
+
+            const slides = document.querySelectorAll('.slide');
+            
+            for (let i = 0; i < slides.length; i++) {
+                const slide = slides[i];
+                
+                const canvas = await html2canvas(slide, {
+                    width: 1080,
+                    height: 1080,
+                    scale: 2,
+                    useCORS: true,
+                    backgroundColor: null, 
+                    logging: false,
+                });
+                
+                const finalCanvas = document.createElement('canvas');
+                finalCanvas.width = canvas.width;
+                finalCanvas.height = canvas.height;
+                const ctx = finalCanvas.getContext('2d');
+                
+                const gradient = ctx.createLinearGradient(0, 0, finalCanvas.width, finalCanvas.height);
+                gradient.addColorStop(0, '#f5f7fa');
+                gradient.addColorStop(1, '#dbe7ff');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+                
+                ctx.drawImage(canvas, 0, 0);
+
+                const imgData = finalCanvas.toDataURL('image/jpeg', 0.9);
+
+                if (i > 0) {
+                    doc.addPage([1080, 1080], 'portrait');
+                }
+                
+                doc.addImage(imgData, 'JPEG', 0, 0, 1080, 1080);
+
+                const links = slide.querySelectorAll('a[href]');
+                if (links.length > 0) {
+                    const originalWidth = slide.offsetWidth;
+                     links.forEach(link => {
+                        const rect = link.getBoundingClientRect();
+                        const slideRect = slide.getBoundingClientRect();
+                        
+                        // Scale factor to convert screen pixels to PDF points
+                        const scaleX = 1080 / slide.offsetWidth;
+                        
+                        // We need the bounding box relative to the slide
+                        const x = rect.left - slideRect.left;
+                        const y = rect.top - slideRect.top;
+                        
+                        doc.link(x * scaleX, y * scaleX, rect.width * scaleX, rect.height * scaleX, { url: link.href });
+                    });
+                }
+            }
+
+            doc.save('Prepe-Cell-Biology.pdf');
+            loaderOverlay.style.display = 'none';
+        });
+    </script>
+</body>
+</html>
